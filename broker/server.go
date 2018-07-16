@@ -111,9 +111,8 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 	select {
 	case <-ctx.Done():
 		s.Server.Shutdown()
+		log.Info("NATS Broker stopped")
 	}
-
-	log.Warn("NATS Broker shutting down")
 }
 
 // Started determines if the server have been started
