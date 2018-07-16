@@ -42,7 +42,7 @@ func main() {
 
 	// Simple Async Subscriber
 	nc.Subscribe("foo", func(s string) {
-    	log.Printf("Received a message: %s\n", s)
+		log.Printf("Received a message: %s\n", s)
 	})
 
 	// Simple Publisher

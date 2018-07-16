@@ -34,12 +34,12 @@ func RunAndConnect(ctx context.Context, wg *sync.WaitGroup, debug bool) *nats.En
 	}
 
 	opts := nats.Options{}
-    opts.Name = "keti"
+	opts.Name = "keti"
 	opts.Url = fmt.Sprintf("nats://%s:%v", nsq.Opts.Host, nsq.Opts.Port)
 
 	nc, err := NewEncodedClient(&opts)
 	if err != nil {
-	        log.Fatalf("Error connecting to local NATS server: %s", err)
+		log.Fatalf("Error connecting to local NATS server: %s", err)
 	}
 
 	log.Infof("Connected to NATS: %s", opts.Url)
