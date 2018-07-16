@@ -25,7 +25,7 @@ nbproject
 *.sublime-workspace
 
 # Binary and DB
-./keti
-./keti.exe
+keti
+keti.exe
 *.gz
 *.zip
