@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+VERSION=$( cat version/VERSION )
+
+GOARCH=amd64
+OSS=( "linux" "darwin" )
+
+for GOOS in ${OSS[@]}; do
+	name=keti-$VERSION-$GOOS
+
+	rm -fr $name.tar.gz $name/
+	mkdir $name
+
+	GOOS=$GOOS GOARCH=$GOARCH ./scripts/build.sh
+	cp clacks-beacond $name/
+	cp clacks-server $name/
+	cp clacks-trends-worker $name/
+
+	tar -czf $name.tar.gz $name/
+	echo "Created ${name}.tar.gz"
+
+	rm -fr $name/
+done
