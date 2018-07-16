@@ -17,6 +17,7 @@ fi
 
 ldflags="
   -s -w
+  -X ${repo_path}/version.Name=${name}
   -X ${repo_path}/version.Version=${version}
   -X ${repo_path}/version.Revision=${revision}
   -X ${repo_path}/version.Branch=${branch}

@@ -12,6 +12,7 @@ import (
 
 // Build information. Populated at build-time.
 var (
+	Name         string
 	Version      string
 	Revision     string
 	Branch       string
@@ -35,9 +36,9 @@ func init() {
 }
 
 // Print returns version information.
-func Print(name string) string {
+func Print() string {
 	m := map[string]string{
-		"program":      name,
+		"program":      Name,
 		"version":      Version,
 		"revision":     Revision,
 		"branch":       Branch,
@@ -55,8 +56,8 @@ func Print(name string) string {
 }
 
 // Info returns version, branch and revision information.
-func Info(name string) string {
-	return fmt.Sprintf("%s (version: %s, branch: %s, revision: %s)", name, Version, Branch, Revision)
+func Info() string {
+	return fmt.Sprintf("%s (version: %s, branch: %s, revision: %s)", Name, Version, Branch, Revision)
 }
 
 // BuildContext returns goVersion and buildDate information.
@@ -65,9 +66,9 @@ func BuildContext() string {
 }
 
 // NewMetricsCollector returns a prometheus.Collector which represents current build information.
-func NewMetricsCollector(name string) *prometheus.GaugeVec {
+func NewMetricsCollector() *prometheus.GaugeVec {
 	labels := map[string]string{
-		"program":      name,
+		"program":      Name,
 		"version":      Version,
 		"revision":     Revision,
 		"branch":       Branch,
