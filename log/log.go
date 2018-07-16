@@ -19,6 +19,7 @@ func init() {
 	zerolog.LevelFieldName = "l"
 	zerolog.MessageFieldName = "m"
 	zerolog.CallerFieldName = "producer"
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	// redirects go's std log to zerolog
 	stdlog.SetFlags(0)
