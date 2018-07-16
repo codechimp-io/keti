@@ -8,13 +8,8 @@ import (
 	"syscall"
 
 	"github.com/codechimp-io/keti/broker"
-	//	"github.com/codechimp-io/keti/version"
 	"github.com/codechimp-io/keti/log"
-)
-
-const (
-	// NAME is the name of the daemon
-	NAME = "keti"
+	"github.com/codechimp-io/keti/version"
 )
 
 var (
@@ -27,11 +22,11 @@ var (
 func main() {
 
 	// Set producer name in logs
-	log.WithCaller(NAME)
+	log.WithCaller(version.Name)
 
 	wg = &sync.WaitGroup{}
 
-	log.Info("Starting...")
+	log.Infof("Starting %s", version.Info())
 
 	// Init context
 	ctx, cancel = context.WithCancel(context.Background())
@@ -56,16 +51,25 @@ func main() {
 }
 
 func signalWatcher() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	for {
 		select {
-		case <-sig:
-			log.Warnf("Shutting down on %s", sig)
-			cancel()
+		case sig := <-sigs:
+			switch sig {
+			case syscall.SIGINT:
+				log.Info("Shutdown requested with CTRL+C!")
+				cancel()
+			case syscall.SIGTERM:
+				log.Info("Shutdown requested with SIGTERM!")
+				cancel()
+			case syscall.SIGQUIT:
+				log.Info("Shutdown requested with SIGQUIT!")
+				cancel()
+			}
 		case <-ctx.Done():
-			log.Warn("Exiting...")
+			//			log.Warn("Server Exiting...")
 			return
 		}
 	}
