@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/codechimp-io/keti/log"
+	"github.com/codechimp-io/keti/version"
 
 	gnatsd "github.com/nats-io/gnatsd/server"
 	"github.com/prometheus/client_golang/prometheus"
@@ -106,7 +107,7 @@ func (s *Server) updatePrometheus() {
 		return
 	}
 
-	i := "keti"
+	i := version.Name
 
 	connectionsGauge.WithLabelValues(i).Set(float64(varz.Connections))
 	totalConnectionsGauge.WithLabelValues(i).Set(float64(varz.TotalConnections))

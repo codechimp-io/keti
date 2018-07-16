@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/codechimp-io/keti/log"
+	"github.com/codechimp-io/keti/version"
 
 	"github.com/nats-io/go-nats"
 )
@@ -34,7 +35,7 @@ func RunAndConnect(ctx context.Context, wg *sync.WaitGroup, debug bool) *nats.En
 	}
 
 	opts := nats.Options{}
-	opts.Name = "keti"
+	opts.Name = fmt.Sprintf("%s-gateway", version.Name)
 	opts.Url = fmt.Sprintf("nats://%s:%v", nsq.Opts.Host, nsq.Opts.Port)
 
 	nc, err := NewEncodedClient(&opts)
