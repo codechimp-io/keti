@@ -14,12 +14,12 @@ import (
 
 // Server wrapper around NATS Server
 type Server struct {
+	sync.Mutex
+
 	Server *gnatsd.Server
 	Opts   *gnatsd.Options
 
 	started bool
-
-	mu *sync.Mutex
 }
 
 // New creates a new instance of the Server struct with a fully configured NATS embedded server
@@ -27,7 +27,6 @@ func NewServer(debug bool) (s *Server, err error) {
 	s = &Server{
 		Opts:    &gnatsd.Options{},
 		started: false,
-		mu:      &sync.Mutex{},
 	}
 
 	s.Opts.Host = gnatsd.DEFAULT_HOST
@@ -102,9 +101,9 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 	go s.Server.Start()
 
-	s.mu.Lock()
+	s.Lock()
 	s.started = true
-	s.mu.Unlock()
+	s.Unlock()
 
 	s.publishStats(ctx, 10*time.Second)
 
@@ -117,8 +116,8 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 // Started determines if the server have been started
 func (s *Server) Started() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.Lock()
+	defer s.Unlock()
 
 	return s.started
 }
