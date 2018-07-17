@@ -27,7 +27,7 @@ func NewClient(o *nats.Options) (*nats.Conn, error) {
 			log.Info("NATS Client Connection Closed")
 		},
 		DisconnectedCB: func(conn *nats.Conn) {
-			log.Warn("NATS Client Disconnected")
+			log.Info("NATS Client Disconnected")
 		},
 		ReconnectedCB: func(conn *nats.Conn) {
 			log.Info("NATS Client Reconnected")
