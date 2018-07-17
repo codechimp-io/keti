@@ -4,7 +4,7 @@ set -e
 
 repo_path="github.com/codechimp-io/keti"
 
-name="keti"
+name="kēti"
 version=$( git describe --tags --abbrev=0 2> /dev/null || echo 'unknown' )
 revision=$( git rev-parse --short HEAD 2> /dev/null || echo 'unknown' )
 branch=$( git rev-parse --abbrev-ref HEAD 2> /dev/null || echo 'unknown' )
