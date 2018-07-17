@@ -10,6 +10,7 @@ import (
 	"github.com/codechimp-io/keti/log"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/nats-io/go-nats"
 )
 
 type SessionFunc func(token string) (*discordgo.Session, error)
@@ -22,8 +23,9 @@ type Manager struct {
 	Name   string
 	UserID string
 
-	// Session
+	// Sessions
 	Session       *discordgo.Session
+	nsc           *nats.EncodedConn
 	eventHandlers []interface{}
 
 	// If set logs connection status events to this channel
@@ -56,10 +58,11 @@ type Manager struct {
 // New creates a new manager with the defaults set, after you have created this you call Manager.Start
 // To start connecting
 // discord.New("Bot TOKEN", OptLogChannel(someChannel), OptLogEventsToDiscord(true, true))
-func New(token string) *Manager {
+func New(token string, nsc *nats.EncodedConn) *Manager {
 	// Setup defaults
 	manager := &Manager{
 		token: token,
+		nsc:   nsc,
 	}
 
 	manager.OnEvent = manager.LogConnectionEventStd
@@ -385,6 +388,16 @@ func (c *Event) String() string {
 	}
 
 	return s
+}
+
+// Event holds data for an event
+type NatsEvent struct {
+	Type      string
+	Shard     int
+	NumShards int
+	Data      interface{}
+	// When this event occured
+	Time time.Time
 }
 
 type EventType int

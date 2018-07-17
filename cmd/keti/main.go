@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/codechimp-io/keti/broker"
+	"github.com/codechimp-io/keti/discord"
 	"github.com/codechimp-io/keti/log"
 	"github.com/codechimp-io/keti/version"
 )
@@ -42,6 +43,9 @@ func main() {
 
 	// Simple Publisher
 	nc.Publish("foo", "Hello World")
+
+	// Run discord manager
+	discord.Run(ctx, wg, nc, "Bot NDI5MzAwNDU5MTE1OTA1MDI0.Die2kg.YRx6kqnONTV_EULIBG3E6iOJ0V0")
 
 	// Spawn OS Signal watcher
 	signalWatcher()

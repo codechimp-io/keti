@@ -7,13 +7,15 @@ import (
 
 	"github.com/codechimp-io/keti/log"
 	"github.com/codechimp-io/keti/version"
+
+	"github.com/nats-io/go-nats"
 )
 
 // Run starts new Discord manager.
-func Run(ctx context.Context, wg *sync.WaitGroup, token string) {
+func Run(ctx context.Context, wg *sync.WaitGroup, nsc *nats.EncodedConn, token string) {
 
 	// Configure new manager
-	mgr := New(token)
+	mgr := New(token, nsc)
 	mgr.Name = version.Name
 	mgr.LogChannel = "466629625167085571"
 	mgr.StatusMessageChannel = "468467517061464076"
