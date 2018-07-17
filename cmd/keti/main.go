@@ -36,14 +36,6 @@ func main() {
 	// Run the embeded broker and obtain connection
 	nc := broker.RunAndConnect(ctx, wg, false)
 
-	// Simple Async Subscriber
-	nc.Subscribe("foo", func(s string) {
-		log.Printf("Received a message: %s\n", s)
-	})
-
-	// Simple Publisher
-	nc.Publish("foo", "Hello World")
-
 	// Run discord manager
 	discord.Run(ctx, wg, nc, "Bot NDI5MzAwNDU5MTE1OTA1MDI0.Die2kg.YRx6kqnONTV_EULIBG3E6iOJ0V0")
 
