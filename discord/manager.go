@@ -392,9 +392,9 @@ func (c *Event) String() string {
 
 // Event holds data for an event
 type NatsEvent struct {
-	Type      string
 	Shard     int
 	NumShards int
+	UserID    interface{}
 	Data      interface{}
 	// When this event occured
 	Time time.Time

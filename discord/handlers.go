@@ -18,8 +18,9 @@ func (m *Manager) OnDiscordDisconnected(s *discordgo.Session, evt *discordgo.Dis
 }
 
 func (m *Manager) OnDiscordReady(s *discordgo.Session, evt *discordgo.Ready) {
-	m.handleEvent(EventReady, "")
+	// Set self ID
 	m.UserID = evt.User.ID
+	m.handleEvent(EventReady, "")
 }
 
 func (m *Manager) OnDiscordResumed(s *discordgo.Session, evt *discordgo.Resumed) {
@@ -47,10 +48,10 @@ func (m *Manager) OnMessageReceive(s *discordgo.Session, e *discordgo.Event) {
 	}
 
 	evt := &NatsEvent{
-		Type:      e.Type,
+		UserID:    s.State.User.ID,
 		Shard:     m.Session.ShardID + 1,
 		NumShards: m.Session.ShardCount,
-		Data:      e.Struct,
+		Data:      e,
 		Time:      time.Now(),
 	}
 
