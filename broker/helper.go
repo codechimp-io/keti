@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/codechimp-io/keti/config"
 	"github.com/codechimp-io/keti/log"
 	"github.com/codechimp-io/keti/version"
 
@@ -13,10 +14,10 @@ import (
 )
 
 // RunAndConnect starts new embedded NATS instance and returns JSON encoded connection to it.
-func RunAndConnect(ctx context.Context, wg *sync.WaitGroup, debug bool) *nats.EncodedConn {
+func RunAndConnect(ctx context.Context, wg *sync.WaitGroup) *nats.EncodedConn {
 
 	// Configure new embed broker
-	nsq, err := NewServer(debug)
+	nsq, err := NewServer(config.Options.Debug)
 	if err != nil {
 		log.Fatalf("Cannot configure new NATS Broker %s", err)
 	}

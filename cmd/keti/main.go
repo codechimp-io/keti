@@ -1,3 +1,4 @@
+// Invite link: https://discordapp.com/api/oauth2/authorize?client_id=468814860596019201&permissions=271641727&scope=bot
 package main
 
 import (
@@ -21,23 +22,20 @@ var (
 )
 
 func main() {
-
 	// Set producer name in logs
 	log.WithCaller(version.Name)
-
+	// Init sync.WaitGroup and Context
 	wg = &sync.WaitGroup{}
-
-	log.Infof("Starting %s", version.Info())
-
-	// Init context
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
+	log.Infof("Starting %s", version.Info())
+
 	// Run the embeded broker and obtain connection
-	nc := broker.RunAndConnect(ctx, wg, false)
+	nc := broker.RunAndConnect(ctx, wg)
 
 	// Run discord manager
-	discord.Run(ctx, wg, nc, "Bot NDI5MzAwNDU5MTE1OTA1MDI0.Die2kg.YRx6kqnONTV_EULIBG3E6iOJ0V0")
+	discord.Run(ctx, wg, nc)
 
 	// Spawn OS Signal watcher
 	signalWatcher()

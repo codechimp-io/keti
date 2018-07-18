@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/codechimp-io/keti/config"
 	"github.com/codechimp-io/keti/log"
 	"github.com/codechimp-io/keti/version"
 
@@ -12,10 +13,10 @@ import (
 )
 
 // Run starts new Discord manager.
-func Run(ctx context.Context, wg *sync.WaitGroup, nsc *nats.EncodedConn, token string) {
+func Run(ctx context.Context, wg *sync.WaitGroup, nsc *nats.EncodedConn) {
 
 	// Configure new manager
-	mgr := New(token, nsc)
+	mgr := New(config.Options.BotToken(), nsc)
 	mgr.Name = version.Name
 	mgr.LogChannel = "466629625167085571"
 	mgr.StatusMessageChannel = "468467517061464076"
