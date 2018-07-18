@@ -170,9 +170,7 @@ func (m *Manager) initSession() error {
 	session.AddHandler(m.OnDiscordDisconnected)
 	session.AddHandler(m.OnDiscordReady)
 	session.AddHandler(m.OnDiscordResumed)
-
-	// To be removed?
-	session.AddHandler(m.OnMessageReceive)
+	session.AddHandler(m.OnEventReceive)
 
 	// Add the user event handlers retroactively
 	for _, v := range m.eventHandlers {
