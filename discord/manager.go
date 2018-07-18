@@ -265,7 +265,7 @@ func (m *Manager) updateStatusMessage(mID string) (string, error) {
 	} else {
 		emoji = "🔥"
 	}
-	content += fmt.Sprintf("Shard [%d/%d]: %s (%d)\n", m.Session.ShardID+1, m.Session.ShardCount, emoji, numGuilds)
+	content += fmt.Sprintf("Shard [%d/%d]: %s %d guilds\n", m.Session.ShardID+1, m.Session.ShardCount, emoji, numGuilds)
 
 	nameStr := ""
 	if m.Name != "" {
