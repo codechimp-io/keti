@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/codechimp-io/keti/broker"
 	"github.com/codechimp-io/keti/log"
 
 	"github.com/bwmarrin/discordgo"
@@ -67,7 +68,7 @@ func (m *Manager) OnEventReceive(s *discordgo.Session, e *discordgo.Event) {
 	}
 
 	// Create NATS messaage and send
-	evt := &NatsEvent{
+	evt := &broker.GatewayEvent{
 		UserID:    s.State.User.ID,
 		Shard:     m.Session.ShardID + 1,
 		NumShards: m.Session.ShardCount,

@@ -24,9 +24,8 @@ type Manager struct {
 	UserID string
 
 	// Sessions
-	Session       *discordgo.Session
-	nsc           *nats.EncodedConn
-	eventHandlers []interface{}
+	Session *discordgo.Session
+	nsc     *nats.EncodedConn
 
 	// If set logs connection status events to this channel
 	LogChannel string
@@ -57,7 +56,7 @@ type Manager struct {
 
 // New creates a new manager with the defaults set, after you have created this you call Manager.Start
 // To start connecting
-// discord.New("Bot TOKEN", OptLogChannel(someChannel), OptLogEventsToDiscord(true, true))
+// discord.New("Bot TOKEN")
 func New(token string, nsc *nats.EncodedConn) *Manager {
 	// Setup defaults
 	manager := &Manager{
@@ -66,9 +65,7 @@ func New(token string, nsc *nats.EncodedConn) *Manager {
 	}
 
 	manager.OnEvent = manager.LogConnectionEventStd
-	manager.SessionFunc = manager.StdSessionFunc
-
-	//	manager.bareSession, _ = discordgo.New(token)
+	manager.SessionFunc = manager.DefaultSessionFunc
 
 	return manager
 }
@@ -78,7 +75,6 @@ func New(token string, nsc *nats.EncodedConn) *Manager {
 func (m *Manager) AddHandler(handler interface{}) {
 	m.Lock()
 	defer m.Unlock()
-	m.eventHandlers = append(m.eventHandlers, handler)
 
 	m.Session.AddHandler(handler)
 }
@@ -88,8 +84,8 @@ func (m *Manager) LogConnectionEventStd(e *Event) {
 	log.Printf(e.String())
 }
 
-// StdSessionFunc is the standard session provider, it does nothing to the actual session
-func (m *Manager) StdSessionFunc(token string) (*discordgo.Session, error) {
+// DefaultSessionFunc is the standard session provider, it does nothing to the actual session
+func (m *Manager) DefaultSessionFunc(token string) (*discordgo.Session, error) {
 	s, err := discordgo.New(token)
 	if err != nil {
 		return nil, err
@@ -172,11 +168,6 @@ func (m *Manager) initSession() error {
 	session.AddHandler(m.OnDiscordResumed)
 	session.AddHandler(m.OnEventReceive)
 
-	// Add the user event handlers retroactively
-	for _, v := range m.eventHandlers {
-		session.AddHandler(v)
-	}
-
 	m.Session = session
 	return nil
 }
@@ -252,7 +243,7 @@ func (m *Manager) updateStatusMessage(mID string) (string, error) {
 	if m.GuildCountFunc != nil {
 		numGuilds = m.GuildCountFunc()
 	} else {
-		numGuilds = m.StdGuildCountFunc()
+		numGuilds = m.DefaultGuildCountFunc()
 	}
 
 	emoji := ""
@@ -326,8 +317,8 @@ func (m *Manager) handleEvent(typ EventType, msg string) {
 	}()
 }
 
-// StdGuildCountFunc uses the standard states to return the guilds
-func (m *Manager) StdGuildCountFunc() (guilds int) {
+// DefaultGuildCountFunc uses the standard states to return the guilds
+func (m *Manager) DefaultGuildCountFunc() (guilds int) {
 
 	m.RLock()
 
@@ -367,8 +358,7 @@ type Event struct {
 
 	Shard     int
 	NumShards int
-
-	Msg string
+	Msg       string
 
 	// When this event occured
 	Time time.Time
@@ -386,16 +376,6 @@ func (c *Event) String() string {
 	}
 
 	return s
-}
-
-// Event holds data for an event
-type NatsEvent struct {
-	Shard     int
-	NumShards int
-	UserID    interface{}
-	Data      interface{}
-	// When this event occured
-	Time time.Time
 }
 
 type EventType int
