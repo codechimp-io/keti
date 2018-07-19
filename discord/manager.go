@@ -27,6 +27,10 @@ type Manager struct {
 	Session *discordgo.Session
 	nsc     *nats.EncodedConn
 
+	// Sharding
+	ShardID    int
+	ShardCount int
+
 	// If set logs connection status events to this channel
 	LogChannel string
 
@@ -60,8 +64,9 @@ type Manager struct {
 func New(token string, nsc *nats.EncodedConn) *Manager {
 	// Setup defaults
 	manager := &Manager{
-		token: token,
-		nsc:   nsc,
+		token:      token,
+		nsc:        nsc,
+		ShardCount: -1,
 	}
 
 	manager.OnEvent = manager.LogConnectionEventStd
@@ -96,6 +101,12 @@ func (m *Manager) DefaultSessionFunc(token string) (*discordgo.Session, error) {
 // Init will initialize the manager
 func (m *Manager) Init() error {
 	m.Lock()
+
+	// If no sharding is set default to one shard
+	if m.ShardCount < 1 {
+		m.ShardID = 0
+		m.ShardCount = 1
+	}
 
 	err := m.initSession()
 	if err != nil {
@@ -161,6 +172,9 @@ func (m *Manager) initSession() error {
 	if err != nil {
 		return err
 	}
+
+	session.ShardCount = m.ShardCount
+	session.ShardID = m.ShardID
 
 	session.AddHandler(m.OnDiscordConnected)
 	session.AddHandler(m.OnDiscordDisconnected)
