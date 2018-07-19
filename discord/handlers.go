@@ -70,7 +70,7 @@ func (m *Manager) OnEventReceive(s *discordgo.Session, e *discordgo.Event) {
 	// Create NATS messaage and send
 	evt := &broker.GatewayEvent{
 		UserID:    s.State.User.ID,
-		Shard:     m.Session.ShardID + 1,
+		Shard:     m.Session.ShardID,
 		NumShards: m.Session.ShardCount,
 		Data:      e,
 		Time:      time.Now(),
