@@ -34,9 +34,6 @@ type Manager struct {
 	// If set logs connection status events to this channel
 	LogChannel string
 
-	// If set keeps an updated satus message in this channel
-	StatusMessageChannel string
-
 	// The function that provides the guild counts for this shard, used for the updated status message
 	// Should return guilds count
 	GuildCountFunc func() int
@@ -48,9 +45,6 @@ type Manager struct {
 	// SessionFunc creates a new session and returns it, override the default one if you have your own
 	// session settings to apply
 	SessionFunc SessionFunc
-
-	nextStatusUpdate     time.Time
-	statusUpdaterStarted bool
 
 	token string
 
@@ -113,13 +107,6 @@ func (m *Manager) Init() error {
 		m.Unlock()
 		return err
 	}
-
-	if !m.statusUpdaterStarted {
-		m.statusUpdaterStarted = true
-		go m.statusRoutine()
-	}
-
-	m.nextStatusUpdate = time.Now()
 
 	m.started = true
 
@@ -197,105 +184,6 @@ func (m *Manager) startSession() error {
 	return nil
 }
 
-func (m *Manager) statusRoutine() {
-	if m.StatusMessageChannel == "" {
-		return
-	}
-
-	mID := ""
-
-	// Find the initial message id and reuse that message if found
-	msgs, err := m.Session.ChannelMessages(m.StatusMessageChannel, 50, "", "", "")
-	if err != nil {
-		m.handleError(err, "Failed requesting message history in channel")
-	} else {
-		for _, msg := range msgs {
-			// Dunno our own bot id so best we can do is bot
-			if msg.Author.ID == m.UserID || len(msg.Embeds) < 1 {
-				continue
-			}
-
-			nameStr := ""
-			if m.Name != "" {
-				nameStr = " for " + m.Name
-			}
-
-			embed := msg.Embeds[0]
-			if embed.Title == "Sharding status"+nameStr {
-				// Found it sucessfully
-				mID = msg.ID
-				break
-			}
-		}
-	}
-
-	ticker := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			m.RLock()
-			after := time.Now().After(m.nextStatusUpdate)
-			m.RUnlock()
-			if after {
-				m.Lock()
-				m.nextStatusUpdate = time.Now().Add(time.Minute)
-				m.Unlock()
-
-				nID, err := m.updateStatusMessage(mID)
-				if !m.handleError(err, "Failed updating status message") {
-					mID = nID
-				}
-			}
-		}
-	}
-}
-
-func (m *Manager) updateStatusMessage(mID string) (string, error) {
-	content := ""
-
-	var numGuilds int
-	if m.GuildCountFunc != nil {
-		numGuilds = m.GuildCountFunc()
-	} else {
-		numGuilds = m.DefaultGuildCountFunc()
-	}
-
-	emoji := ""
-	if m.Session.DataReady {
-		emoji = "👌"
-	} else if m.Session != nil {
-		emoji = "🕒"
-	} else {
-		emoji = "🔥"
-	}
-	content += fmt.Sprintf("Shard [%d/%d]: %s %d guilds\n", m.Session.ShardID+1, m.Session.ShardCount, emoji, numGuilds)
-
-	nameStr := ""
-	if m.Name != "" {
-		nameStr = " for " + m.Name
-	}
-
-	embed := &discordgo.MessageEmbed{
-		Title:       "Sharding status" + nameStr,
-		Description: content,
-		Color:       0x4286f4,
-		Timestamp:   time.Now().Format(time.RFC3339),
-	}
-
-	if mID == "" {
-		msg, err := m.Session.ChannelMessageSendEmbed(m.StatusMessageChannel, embed)
-		if err != nil {
-			return "", err
-		}
-
-		return msg.ID, err
-	}
-
-	m.Session.UpdateStatus(0, fmt.Sprintf("Shard %d/%d for %d Guilds\n", m.Session.ShardID+1, m.Session.ShardCount, numGuilds))
-	_, err := m.Session.ChannelMessageEditEmbed(m.StatusMessageChannel, mID, embed)
-	return mID, err
-}
-
 func (m *Manager) handleError(err error, msg string) bool {
 	if err == nil {
 		return false
@@ -323,12 +211,6 @@ func (m *Manager) handleEvent(typ EventType, msg string) {
 	if m.LogChannel != "" {
 		go m.logEventToDiscord(evt)
 	}
-
-	go func() {
-		m.Lock()
-		m.nextStatusUpdate = time.Now().Add(time.Second * 2)
-		m.Unlock()
-	}()
 }
 
 // DefaultGuildCountFunc uses the standard states to return the guilds
