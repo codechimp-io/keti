@@ -8,7 +8,6 @@ import (
 
 	"github.com/codechimp-io/keti/config"
 	"github.com/codechimp-io/keti/log"
-	"github.com/codechimp-io/keti/version"
 
 	"github.com/nats-io/go-nats"
 )
@@ -36,7 +35,7 @@ func RunAndConnect(ctx context.Context, wg *sync.WaitGroup) *nats.EncodedConn {
 	}
 
 	opts := nats.Options{}
-	opts.Name = fmt.Sprintf("%s-gateway", version.Name)
+	opts.Name = fmt.Sprintf("discord-shard-%d", config.Options.Discord.ShardID)
 	opts.Url = fmt.Sprintf("nats://%s:%v", nsq.Opts.Host, nsq.Opts.Port)
 
 	nc, err := NewEncodedClient(&opts)
