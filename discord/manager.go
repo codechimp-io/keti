@@ -20,16 +20,14 @@ type Manager struct {
 	sync.RWMutex
 
 	// Name of the bot, to appear in the title of the updated status message
-	Name   string
-	UserID string
+	Name string
 
 	// Sessions
-	Session *discordgo.Session
-	nsc     *nats.EncodedConn
+	Sessions map[int]*discordgo.Session
+	nsc      *nats.EncodedConn
 
-	// Sharding
-	ShardID    int
-	ShardCount int
+	// handlers
+	eventHandlers []interface{}
 
 	// If set logs connection status events to this channel
 	LogChannel string
@@ -46,69 +44,75 @@ type Manager struct {
 	// session settings to apply
 	SessionFunc SessionFunc
 
+	// Total Shards and current number of shards for this instance
+	ShardsTotal  int
+	ShardsCount  int
+	ShardsOffset int
+
 	token string
 
-	//	bareSession *discordgo.Session
-	started bool
+	bareSession *discordgo.Session
+	started     bool
 }
 
-// New creates a new manager with the defaults set, after you have created this you call Manager.Start
+// New creates a new shard manager with the defaults set, after you have created this you call Manager.Start
 // To start connecting
-// discord.New("Bot TOKEN")
+// dshardmanager.New("Bot asd", OptLogChannel(someChannel), OptLogEventsToDiscord(true, true))
 func New(token string, nsc *nats.EncodedConn) *Manager {
 	// Setup defaults
 	manager := &Manager{
-		token:      token,
-		nsc:        nsc,
-		ShardCount: -1,
+		token:       token,
+		ShardsCount: -1,
+		nsc:         nsc,
 	}
 
 	manager.OnEvent = manager.LogConnectionEventStd
 	manager.SessionFunc = manager.DefaultSessionFunc
 
+	manager.bareSession, _ = discordgo.New(token)
+
 	return manager
 }
 
-// Adds an event handler
+// GetNumShards returns the current set number of shards for this instance
+func (m *Manager) GetNumShards() int {
+	return m.ShardsCount
+}
+
+// Adds an event handler to all shards
 // All event handlers will be added to new sessions automatically.
 func (m *Manager) AddHandler(handler interface{}) {
 	m.Lock()
 	defer m.Unlock()
+	m.eventHandlers = append(m.eventHandlers, handler)
 
-	m.Session.AddHandler(handler)
-}
-
-// LogConnectionEventStd is the standard connection event logger, it logs it to whatever log.output is set to.
-func (m *Manager) LogConnectionEventStd(e *Event) {
-	log.Printf(e.String())
-}
-
-// DefaultSessionFunc is the standard session provider, it does nothing to the actual session
-func (m *Manager) DefaultSessionFunc(token string) (*discordgo.Session, error) {
-	s, err := discordgo.New(token)
-	if err != nil {
-		return nil, err
+	if len(m.Sessions) > 0 {
+		for _, v := range m.Sessions {
+			v.AddHandler(handler)
+		}
 	}
-	return s, nil
 }
 
-// Init will initialize the manager
+// Init initializesthe manager, retreiving the recommended shard count if needed
+// and initalizes all the shards
 func (m *Manager) Init() error {
 	m.Lock()
 
 	// If no sharding is set default to one shard
-	if m.ShardCount < 1 {
-		m.ShardID = 0
-		m.ShardCount = 1
+	if m.ShardsCount < 1 {
+		m.ShardsCount = 1
+		m.ShardsTotal = 1
+		m.ShardsOffset = 0
 	}
 
-	err := m.initSession()
-	if err != nil {
-		m.Unlock()
-		return err
+	m.Sessions = make(map[int]*discordgo.Session, m.ShardsCount)
+	for i := m.ShardsOffset; i < m.ShardsCount; i++ {
+		err := m.initSession(i)
+		if err != nil {
+			m.Unlock()
+			return err
+		}
 	}
-
-	m.started = true
 
 	m.Unlock()
 
@@ -121,7 +125,7 @@ func (m *Manager) Start(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	m.Lock()
-	if m.Session == nil {
+	if m.Sessions == nil {
 		m.Unlock()
 		err := m.Init()
 		if err != nil {
@@ -132,18 +136,39 @@ func (m *Manager) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 	m.Unlock()
 
-	m.Lock()
-	err := m.startSession()
-	m.Unlock()
-	if err != nil {
-		log.Fatalf("Cannot start Discord session: %s", err)
+	for i := m.ShardsOffset; i < m.ShardsCount; i++ {
+		if i != 0 {
+			// One indentify every 5 seconds
+			time.Sleep(time.Second * 5)
+		}
+
+		m.Lock()
+		err := m.startSession(i)
+		m.Unlock()
+		if err != nil {
+			log.Fatalf("Cannot start Discord ShardID: %d, session: %s", err, i)
+		}
 	}
 
 	select {
 	case <-ctx.Done():
-		m.Session.Close()
-		log.Info("Discord session closed")
+		m.StopAll()
+		log.Info("Discord sessions closed")
 	}
+
+}
+
+// StopAll stops all the shard sessions and returns the last error that occured
+func (m *Manager) StopAll() (err error) {
+	m.Lock()
+	for _, v := range m.Sessions {
+		if e := v.Close(); e != nil {
+			err = e
+		}
+	}
+	m.Unlock()
+
+	return
 }
 
 // Started determines if the manager have been started
@@ -154,77 +179,89 @@ func (m *Manager) Started() bool {
 	return m.started
 }
 
-func (m *Manager) initSession() error {
+func (m *Manager) initSession(shard int) error {
 	session, err := m.SessionFunc(m.token)
 	if err != nil {
 		return err
 	}
 
-	session.ShardCount = m.ShardCount
-	session.ShardID = m.ShardID
+	session.ShardCount = m.ShardsTotal
+	session.ShardID = shard
 
 	session.AddHandler(m.OnDiscordConnected)
 	session.AddHandler(m.OnDiscordDisconnected)
 	session.AddHandler(m.OnDiscordReady)
 	session.AddHandler(m.OnDiscordResumed)
-	session.AddHandler(m.OnEventReceive)
+	session.AddHandler(m.OnDiscordEvent)
 
-	m.Session = session
+	// Add the user event handlers retroactively
+	for _, v := range m.eventHandlers {
+		session.AddHandler(v)
+	}
+
+	m.Sessions[shard] = session
 	return nil
 }
 
-func (m *Manager) startSession() error {
+func (m *Manager) startSession(shard int) error {
 
-	err := m.Session.Open()
+	err := m.Sessions[shard].Open()
 	if err != nil {
 		return err
 	}
-	m.handleEvent(EventOpen, "")
+	m.handleEvent(EventOpen, shard, "")
 
 	return nil
 }
 
-func (m *Manager) handleError(err error, msg string) bool {
+// Session retrieves a session from the sessions map, rlocking it in the process
+func (m *Manager) Session(shardID int) *discordgo.Session {
+	m.RLock()
+	defer m.RUnlock()
+	return m.Sessions[m.ShardsOffset+shardID]
+}
+
+// LogConnectionEventStd is the standard connection event logger, it logs it to whatever log.output is set to.
+func (m *Manager) LogConnectionEventStd(e *Event) {
+	log.Printf("[Shard Manager] %s", e.String())
+}
+
+func (m *Manager) handleError(err error, shard int, msg string) bool {
 	if err == nil {
 		return false
 	}
 
-	m.handleEvent(EventError, msg+": "+err.Error())
+	m.handleEvent(EventError, shard, msg+": "+err.Error())
 	return true
 }
 
-func (m *Manager) handleEvent(typ EventType, msg string) {
+func (m *Manager) handleEvent(typ EventType, shard int, msg string) {
 	if m.OnEvent == nil {
 		return
 	}
 
 	evt := &Event{
 		Type:      typ,
-		Shard:     m.Session.ShardID,
-		NumShards: m.Session.ShardCount,
+		Shard:     shard,
+		NumShards: m.ShardsTotal,
 		Msg:       msg,
 		Time:      time.Now(),
 	}
 
-	go m.OnEvent(evt)
+	m.OnEvent(evt)
 
 	if m.LogChannel != "" {
 		go m.logEventToDiscord(evt)
 	}
 }
 
-// DefaultGuildCountFunc uses the standard states to return the guilds
-func (m *Manager) DefaultGuildCountFunc() (guilds int) {
-
-	m.RLock()
-
-	m.Session.State.RLock()
-	guilds = len(m.Session.State.Guilds)
-	m.Session.State.RUnlock()
-
-	m.RUnlock()
-
-	return
+// DefaultSessionFunc is the default session provider, it does nothing to the actual session
+func (m *Manager) DefaultSessionFunc(token string) (*discordgo.Session, error) {
+	s, err := discordgo.New(token)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func (m *Manager) logEventToDiscord(evt *Event) {
@@ -244,8 +281,8 @@ func (m *Manager) logEventToDiscord(evt *Event) {
 		Color:       eventColors[evt.Type],
 	}
 
-	_, err := m.Session.ChannelMessageSendEmbed(m.LogChannel, embed)
-	m.handleError(err, "Failed sending event to discord")
+	_, err := m.bareSession.ChannelMessageSendEmbed(m.LogChannel, embed)
+	m.handleError(err, evt.Shard, "Failed sending event to discord")
 }
 
 // Event holds data for an event
@@ -254,7 +291,8 @@ type Event struct {
 
 	Shard     int
 	NumShards int
-	Msg       string
+
+	Msg string
 
 	// When this event occured
 	Time time.Time
@@ -266,7 +304,7 @@ func (c *Event) String() string {
 		prefix = fmt.Sprintf("[%d/%d] ", c.Shard+1, c.NumShards)
 	}
 
-	s := fmt.Sprintf("Discord %s%s", prefix, strings.Title(c.Type.String()))
+	s := fmt.Sprintf("%s%s", prefix, strings.Title(c.Type.String()))
 	if c.Msg != "" {
 		s += ": " + c.Msg
 	}

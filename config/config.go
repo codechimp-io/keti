@@ -21,11 +21,12 @@ type EnvConfig struct {
 }
 
 type discord struct {
-	Token      string `envconfig:"KETI_DISCORD_TOKEN" default:""`
-	ShardID    int    `envconfig:"KETI_DISCORD_SHARD_ID" default:"0"`
-	ShardCount int    `envconfig:"KETI_DISCORD_SHARD_COUNT" default:"1"`
-	StatusChan string `envconfig:"KETI_DISCORD_STATUS_CHANNEL" default:""`
-	LogChan    string `envconfig:"KETI_DISCORD_LOG_CHANNEL" default:""`
+	Token       string `envconfig:"KETI_DISCORD_TOKEN" default:""`
+	ShardCount  int    `envconfig:"KETI_DISCORD_SHARD_COUNT" default:"1"`
+	ShardOffset int    `envconfig:"KETI_DISCORD_SHARD_OFFSET" default:"1"`
+	ShardTotal  int    `envconfig:"KETI_DISCORD_SHARD_TOTAL" default:""`
+	StatusChan  string `envconfig:"KETI_DISCORD_STATUS_CHANNEL" default:""`
+	LogChan     string `envconfig:"KETI_DISCORD_LOG_CHANNEL" default:""`
 }
 
 func (d *discord) BotToken() string {

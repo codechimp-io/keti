@@ -10,44 +10,32 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var allowedEventsMap = map[string]struct{}{
-	"CHANNEL_CREATE": struct{}{},
-	"CHANNEL_DELETE": struct{}{},
-	//	"CHANNEL_PINS_UPDATE": struct{}{},
-	"CHANNEL_UPDATE":      struct{}{},
-	"GUILD_BAN_ADD":       struct{}{},
-	"GUILD_BAN_REMOVE":    struct{}{},
-	"GUILD_CREATE":        struct{}{},
-	"GUILD_DELETE":        struct{}{},
-	"GUILD_UPDATE":        struct{}{},
-	"GUILD_MEMBER_ADD":    struct{}{},
-	"GUILD_MEMBER_REMOVE": struct{}{},
-	"GUILD_MEMBER_UPDATE": struct{}{},
-	"MESSAGE_CREATE":      struct{}{},
-	"PRESENCE_UPDATE":     struct{}{},
+var ignoredEventsMap = map[string]struct{}{
+	"CHANNEL_PINS_UPDATE": struct{}{},
+	"MESSAGE_UPDATE":      struct{}{},
+	"TYPING_START":        struct{}{},
 }
 
 func (m *Manager) OnDiscordConnected(s *discordgo.Session, e *discordgo.Connect) {
-	m.handleEvent(EventConnected, "")
+	m.handleEvent(EventConnected, s.ShardID, "")
 }
 
 func (m *Manager) OnDiscordDisconnected(s *discordgo.Session, e *discordgo.Disconnect) {
-	m.handleEvent(EventDisconnected, "")
+	m.handleEvent(EventDisconnected, s.ShardID, "")
 }
 
 func (m *Manager) OnDiscordReady(s *discordgo.Session, e *discordgo.Ready) {
-	// Set self ID
-	m.UserID = e.User.ID
-	m.Session.StateEnabled = false
+	// Disable State cache
+	m.Sessions[s.ShardID].StateEnabled = false
 
-	m.handleEvent(EventReady, "")
+	m.handleEvent(EventReady, s.ShardID, "")
 }
 
 func (m *Manager) OnDiscordResumed(s *discordgo.Session, evt *discordgo.Resumed) {
-	m.handleEvent(EventResumed, "")
+	m.handleEvent(EventResumed, s.ShardID, "")
 }
 
-func (m *Manager) OnEventReceive(s *discordgo.Session, e *discordgo.Event) {
+func (m *Manager) OnDiscordEvent(s *discordgo.Session, e *discordgo.Event) {
 
 	// Ignore events that don't contain data
 	if e.Operation != 0 || e.Type == "" {
@@ -55,7 +43,7 @@ func (m *Manager) OnEventReceive(s *discordgo.Session, e *discordgo.Event) {
 	}
 
 	// Ignore events in ignoredEventsMap
-	if _, ok := allowedEventsMap[e.Type]; !ok {
+	if _, ok := ignoredEventsMap[e.Type]; ok {
 		return
 	}
 
@@ -69,15 +57,14 @@ func (m *Manager) OnEventReceive(s *discordgo.Session, e *discordgo.Event) {
 
 	// Create NATS messaage and send
 	evt := &broker.GatewayEvent{
-		UserID:    s.State.User.ID,
-		Shard:     m.Session.ShardID,
-		NumShards: m.Session.ShardCount,
-		Data:      e,
-		Time:      time.Now(),
+		Shard:  s.ShardID,
+		UserID: s.State.User.ID,
+		Data:   e,
+		Time:   time.Now(),
 	}
 
 	// Publish message
-	m.nsc.Publish("gateway:incomming", evt)
+	m.nsc.Publish("gateway:exchange", evt)
 
 	//	log.Debugf("Type: %s, ShardID: %d, Msg: %s", e.Type, s.ShardID+1, e.RawData)
 }
