@@ -16,15 +16,17 @@ import (
 func Run(ctx context.Context, wg *sync.WaitGroup, nsc *nats.EncodedConn) {
 
 	// Configure new manager
-	mgr := New(config.Options.BotToken(), nsc)
+	mgr := New(config.Options.Discord.BotToken(), nsc)
 	mgr.Name = version.Name
 	mgr.LogChannel = "466629625167085571"
-	mgr.StatusMessageChannel = "468467517061464076"
+	mgr.ShardsCount = config.Options.Discord.ShardCount
+	mgr.ShardsOffset = config.Options.Discord.ShardOffset
+	mgr.ShardsTotal = config.Options.Discord.ShardTotal
 
 	wg.Add(1)
 	go mgr.Start(ctx, wg)
 
-	if mgr.Session != nil {
+	if len(mgr.Sessions) > 0 {
 		for {
 			if mgr.Started() {
 				break

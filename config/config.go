@@ -16,16 +16,25 @@ func init() {
 }
 
 type EnvConfig struct {
-	Debug bool   `envconfig:"KETI_DEBUG" default:"false" required:"true"`
-	Token string `envconfig:"KETI_BOT_TOKEN" default:""`
+	Debug   bool `envconfig:"KETI_DEBUG" default:"false" required:"true"`
+	Discord discord
 }
 
-func (e *EnvConfig) BotToken() string {
-	if e.Token == "" {
+type discord struct {
+	Token       string `envconfig:"KETI_DISCORD_TOKEN" default:""`
+	ShardCount  int    `envconfig:"KETI_DISCORD_SHARD_COUNT" default:"1"`
+	ShardOffset int    `envconfig:"KETI_DISCORD_SHARD_OFFSET" default:"1"`
+	ShardTotal  int    `envconfig:"KETI_DISCORD_SHARD_TOTAL" default:""`
+	StatusChan  string `envconfig:"KETI_DISCORD_STATUS_CHANNEL" default:""`
+	LogChan     string `envconfig:"KETI_DISCORD_LOG_CHANNEL" default:""`
+}
+
+func (d *discord) BotToken() string {
+	if d.Token == "" {
 		log.Fatal("Discord Bot token cannot be left blank")
 	}
 
-	return fmt.Sprintf("Bot %s", e.Token)
+	return fmt.Sprintf("Bot %s", d.Token)
 }
 
 var Options EnvConfig
