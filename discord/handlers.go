@@ -12,6 +12,7 @@ import (
 
 var ignoredEventsMap = map[string]struct{}{
 	"CHANNEL_PINS_UPDATE": struct{}{},
+	"GUILD_EMOJIS_UPDATE": struct{}{},
 	"MESSAGE_UPDATE":      struct{}{},
 	"TYPING_START":        struct{}{},
 }
