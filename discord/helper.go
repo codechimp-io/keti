@@ -18,7 +18,6 @@ func Run(ctx context.Context, wg *sync.WaitGroup, nsc *nats.EncodedConn) {
 	// Configure new manager
 	mgr := New(config.Options.Discord.BotToken(), nsc)
 	mgr.Name = version.Name
-	mgr.LogChannel = "466629625167085571"
 	mgr.ShardsCount = config.Options.Discord.ShardCount
 	mgr.ShardsOffset = config.Options.Discord.ShardOffset
 	mgr.ShardsTotal = config.Options.Discord.ShardTotal

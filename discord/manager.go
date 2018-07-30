@@ -29,9 +29,6 @@ type Manager struct {
 	// handlers
 	eventHandlers []interface{}
 
-	// If set logs connection status events to this channel
-	LogChannel string
-
 	// The function that provides the guild counts for this shard, used for the updated status message
 	// Should return guilds count
 	GuildCountFunc func() int
@@ -57,7 +54,7 @@ type Manager struct {
 
 // New creates a new shard manager with the defaults set, after you have created this you call Manager.Start
 // To start connecting
-// dshardmanager.New("Bot asd", OptLogChannel(someChannel), OptLogEventsToDiscord(true, true))
+// dshardmanager.New("Bot asd", nats)
 func New(token string, nsc *nats.EncodedConn) *Manager {
 	// Setup defaults
 	manager := &Manager{
@@ -248,11 +245,7 @@ func (m *Manager) handleEvent(typ EventType, shard int, msg string) {
 		Time:      time.Now(),
 	}
 
-	m.OnEvent(evt)
-
-	if m.LogChannel != "" {
-		go m.logEventToDiscord(evt)
-	}
+	go m.OnEvent(evt)
 }
 
 // DefaultSessionFunc is the default session provider, it does nothing to the actual session
@@ -262,27 +255,6 @@ func (m *Manager) DefaultSessionFunc(token string) (*discordgo.Session, error) {
 		return nil, err
 	}
 	return s, nil
-}
-
-func (m *Manager) logEventToDiscord(evt *Event) {
-	if evt.Type == EventError {
-		return
-	}
-
-	prefix := ""
-	if m.Name != "" {
-		prefix = m.Name + ": "
-	}
-
-	str := evt.String()
-	embed := &discordgo.MessageEmbed{
-		Description: prefix + str,
-		Timestamp:   evt.Time.Format(time.RFC3339),
-		Color:       eventColors[evt.Type],
-	}
-
-	_, err := m.bareSession.ChannelMessageSendEmbed(m.LogChannel, embed)
-	m.handleError(err, evt.Shard, "Failed sending event to discord")
 }
 
 // Event holds data for an event
