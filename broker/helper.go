@@ -35,7 +35,7 @@ func RunAndConnect(ctx context.Context, wg *sync.WaitGroup) *nats.EncodedConn {
 	}
 
 	opts := nats.Options{}
-	opts.Name = fmt.Sprintf("discord-shards-%d-%d", config.Options.Discord.ShardOffset, config.Options.Discord.ShardOffset+config.Options.Discord.ShardCount)
+	opts.Name = fmt.Sprintf("discord-shards-%d-%d", config.Options.Discord.ShardOffset, config.Options.Discord.ShardOffset+config.Options.Discord.ShardCount-1)
 	opts.Url = fmt.Sprintf("nats://%s:%v", nsq.Opts.Host, nsq.Opts.Port)
 
 	nc, err := NewEncodedClient(&opts)
