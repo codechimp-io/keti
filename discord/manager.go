@@ -143,7 +143,7 @@ func (m *Manager) Start(ctx context.Context, wg *sync.WaitGroup) {
 		err := m.startSession(i)
 		m.Unlock()
 		if err != nil {
-			log.Fatalf("Cannot start Discord ShardID: %d, session: %s", err, i)
+			log.Fatalf("Cannot start Discord ShardID: %d, session: %d", err, i)
 		}
 	}
 

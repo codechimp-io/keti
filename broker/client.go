@@ -33,7 +33,7 @@ func NewClient(o *nats.Options) (*nats.Conn, error) {
 			log.Info("NATS Client Reconnected")
 		},
 		AsyncErrorCB: func(conn *nats.Conn, sub *nats.Subscription, err error) {
-			log.Errorf("NATS async error for %s: %s", sub, err)
+			log.Errorf("NATS async error for %s: %s", sub.Subject, err)
 		},
 	}
 
